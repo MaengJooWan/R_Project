@@ -1,0 +1,205 @@
+---
+title: "Shiny를 이용한 전국 초,중,고 공립,사립,국립 개교 현황 시각화"
+author: "JooWan Maeng"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_document:
+    highlight: tango
+    number_sections: yes
+    theme: united
+    toc: no
+    toc_depth: 3
+   # toc_float: yes
+runtime: shiny
+---
+
+*********
+#\.  Excel로 데이터 가공
+- https://www.data.go.kr/dataset/15021158/standard.do 접속 후CSV 파일 다운로드
+
+![](https://github.com/MaengJooWan/R_Project/blob/master/Image_01.JPG?raw=true)
+
+- Excel를 연 후에 다음 밑 사진과 같이 행 열 필드 값 작성
+
+
+
+![](https://github.com/MaengJooWan/R_Project/blob/master/Image_02.jpg?raw=true)
+
+- offset 함수를 사용하여 "교육청", "설립형태", "학교구분" 필드의 값들을 참조 대상으로 이름 정의를 지정
+- offset 함수는 Excel에서 행과 열로 구성되어 있는 범위에 대한 참조를 반환
+- 수식 파라미터 : OFFSET(reference, rows, cols, [height], [width])
+- 수식 EX : OFFSET(전국초중등학교위치표준데이터!$C$1,0,8,COUNTA(전국초중등학교위치표준데이터!$F:$F),1)
+
+
+![](https://github.com/MaengJooWan/R_Project/blob/master/Image_03.JPG?raw=true)
+
+- 다음과 같이 수식을 사용하여 각 지역별 학교 현황 계산
+- COUNTIFS는 다중 개수를 새기 위해서 사용하는 함수
+- 데이터 가공이 완료 되었으면 CSV파일로 저장
+
+
+#\. 필요한 라이브러리 설치
+```{r}
+#필요한 패키지 다운로드
+#leaflet는 자바스크립트로 만든 지도
+#devtools는 github에 올라온 라이브러리를 다운로드 해주는 역할을 해줌
+#kormaps는 대한민국 행정지도 데이터
+#data.table는 데이터를 table 형식으로 표현해주는 라이브러리
+#install.packages("data.table")
+#install.packages("leaflet")
+#install.packages("devtools")  # 한번 설치한 경우에는 다시 설치할 필요 없습니다.
+#devtools::install_github("cardiomoon/Kormaps")
+
+
+#다운 받은 라이브러리를 셋팅
+rm(list = ls())
+library(webshot)
+require(Kormaps)
+require(tmap)
+require(leaflet)
+library(data.table)
+```
+
+
+#\.R언어로 데이터 가공
+```{r}
+#현재 프로젝트가 있는 경로로 변경
+setwd("C:\\Users\\kkag2\\Desktop\\R_Project")
+
+#현재 프로젝트 경로 표시
+getwd()
+
+#학교 데이터를 table 형식으로 가공 후 표시
+school <- fread("school_data.csv", sep = ",", header = T, stringsAsFactors = F)
+school
+
+#korpopmap 라이브러리 인코딩 처리
+Encoding(names(korpopmap1))<-"UTF-8"
+Encoding(korpopmap1@data$name)<-"UTF-8"
+Encoding(korpopmap1@data$행정구역별_읍면동)<-"UTF-8"
+
+value <- data.table(kormap1@data)
+
+korpopmap1@data$name
+
+#school table의 열 이름을 쓰고 싶으면 열을 풀어야 됨
+a <- unlist(school[,2], use.names = FALSE)
+
+#school 데이터를 보면 16개의 obs, 10개의 variables로 되어 있음
+korpopmap1@data<-cbind(korpopmap1@data, school[1:16])
+mymap <- korpopmap1
+
+
+#palette는 색상 지정, popup은 지역 클릭시 팝업에 노출될 글씨 설정
+#paste0은 공백 없이 붙히는 함수
+mypalette1 <- colorNumeric(palette = "Reds", domain = mymap@data$공립초등학교)
+mypopup1 <- paste0(mymap$name, "공립 초등학교 수 : ",mymap@data$공립초등학교)
+mypalette2 <- colorNumeric(palette = "Greens", domain = mymap@data$공립중학교)
+mypopup2 <- paste0(mymap$name, "공립 중학교 수 : ",mymap@data$공립중학교)
+mypalette3 <- colorNumeric(palette = "Blues", domain = mymap@data$공립고등학교)
+mypopup3 <- paste0(mymap$name, "공립 고등학교 수 : ",mymap@data$공립고등학교)
+
+mypalette4 <- colorNumeric(palette = "Reds", domain = mymap@data$사립초등학교)
+mypopup4 <- paste0(mymap$name, "사립 초등학교 수 : ",mymap@data$사립초등학교)
+mypalette5 <- colorNumeric(palette = "Greens", domain = mymap@data$사립중학교)
+mypopup5 <- paste0(mymap$name, "사립 중학교 수 : ",mymap@data$사립중학교)
+mypalette6 <- colorNumeric(palette = "Blues", domain = mymap@data$사립고등학교)
+mypopup6 <- paste0(mymap$name, "사립 고등학교 수 : ",mymap@data$사립고등학교)
+
+mypalette7 <- colorNumeric(palette = "Reds", domain = mymap@data$국립초등학교)
+mypopup7 <- paste0(mymap$name, "국립 초등학교 수 : ",mymap@data$국립초등학교)
+mypalette8 <- colorNumeric(palette = "Greens", domain = mymap@data$국립중학교)
+mypopup8 <- paste0(mymap$name, "국립 중학교 수 : ",mymap@data$국립중학교)
+mypalette9 <- colorNumeric(palette = "Blues", domain = mymap@data$국립고등학교)
+mypopup9 <- paste0(mymap$name, "국ㄹ 고등학교 수 : ",mymap@data$국립고등학교)
+```
+
+
+
+#\. 공립 초등학교 데이터 시각화
+```{r}
+#공립초등학교 데이터만 시각화
+leaflet(mymap) %>%
+  addTiles() %>%
+  addPolygons(stroke = FALSE,
+              smoothFactor = 0.2,
+              fillOpacity = .8,
+              popup = mypopup1,
+              color = ~mypalette1(mymap@data$공립초등학교))
+```
+
+
+
+#\. 공립 초등학교, 중학교, 고등학교 데이터 시각화
+```{r}
+#공립초등학교, 공립중학교, 공립고등학교 데이터 시각화
+multilayer_map<-leaflet(mymap) %>%
+  addTiles() %>%
+  addPolygons(stroke = FALSE,
+              smoothFactor = 0.2,
+              fillOpacity = .7,
+              popup = mypopup1,
+              color = ~mypalette1(mymap@data$공립초등학교),
+              group="공립초등학교") %>%
+  addPolygons(stroke = FALSE,
+              smoothFactor = 0.2,
+              fillOpacity = .7,
+              popup = mypopup2,
+              color = ~mypalette2(mymap@data$공립중학교),
+              group="공립중학교") %>%
+  addPolygons(stroke = FALSE,
+              smoothFactor = 0.2,
+              fillOpacity = .7,
+              popup = mypopup3,
+              color = ~mypalette3(mymap@data$공립고등학교),
+              group="공립고등학교") %>%
+    addPolygons(stroke = FALSE,
+              smoothFactor = 0.2,
+              fillOpacity = .7,
+              popup = mypopup4,
+              color = ~mypalette4(mymap@data$사립초등학교),
+              group="사립초등학교") %>%
+  addPolygons(stroke = FALSE,
+              smoothFactor = 0.2,
+              fillOpacity = .7,
+              popup = mypopup5,
+              color = ~mypalette5(mymap@data$사립중학교),
+              group="사립중학교") %>%
+  addPolygons(stroke = FALSE,
+              smoothFactor = 0.2,
+              fillOpacity = .7,
+              popup = mypopup6,
+              color = ~mypalette6(mymap@data$사립고등학교),
+              group="사립고등학교") %>%
+    addPolygons(stroke = FALSE,
+              smoothFactor = 0.2,
+              fillOpacity = .7,
+              popup = mypopup7,
+              color = ~mypalette7(mymap@data$국립초등학교),
+              group="국립초등학교") %>%
+  addPolygons(stroke = FALSE,
+              smoothFactor = 0.2,
+              fillOpacity = .7,
+              popup = mypopup8,
+              color = ~mypalette8(mymap@data$국립중학교),
+              group="국립중학교") %>%
+  addPolygons(stroke = FALSE,
+              smoothFactor = 0.2,
+              fillOpacity = .7,
+              popup = mypopup9,
+              color = ~mypalette9(mymap@data$국립고등학교),
+              group="국립고등학교") %>%
+  
+  addLayersControl(
+    baseGroups = c("공립초등학교","공립중학교","공립고등학교","사립초등학교","사립중학교","사립고등학교","국립초등학교","국립중학교","국립고등학교"),
+    position = "bottomleft",
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
+#멀티지도 보여주기
+multilayer_map
+```
+
+
+
+#\. Shiny를 이용한 데이터 시각화
