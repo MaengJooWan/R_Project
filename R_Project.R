@@ -93,4 +93,33 @@ multilayer_map<-leaflet(mymap) %>%
 #멀티지도 보여주기
 multilayer_map
 
+#지역별 학교개수
 
+local1 <- mymap@data$공립초등학교+mymap@data$사립초등학교+mymap@data$국립초등학교
+local2 <- mymap@data$사립초등학교+mymap@data$사립중학교+mymap@data$사립고등학교
+local3 <- mymap@data$국립초등학교+mymap@data$국립중학교+mymap@data$국립고등학교
+
+#전국별 학교개수
+global1 <-sum(mymap@data$공립초등학교+mymap@data$사립초등학교+mymap@data$국립초등학교)
+global2 <-sum(mymap@data$공립중학교+mymap@data$사립중학교+mymap@data$국립중학교)
+global3 <-sum(mymap@data$공립고등학교+mymap@data$사립고등학교+mymap@data$국립고등학교)
+
+
+#전국별 학교 개수를 frame으로 만듬
+school_name = c("초등학교","중학교","고등학교")
+school_all_value = c(global1,global2,global3)
+
+#Factors 형식을 FALSE를 해야 데이터를 쓸 수 있음 ggplot에선 Factors 지원 안함..
+scholl_result = data.frame(school_name,school_all_value, stringsAsFactors = FALSE)
+
+scholl_result
+
+school_result1 = data.frame(mymap$name,local1,local2,local3, stringsAsFactors = FALSE)
+
+school_result1
+
+
+p = ggplot(scholl_result, aes(x = school_name, y = school_all_value)) + geom_bar(stat = "identity", fill = "red")
+
+p + geom_text(aes(label = school_all_value),size = 10,hjust=0.5, color='#FFFFFF')
+       
